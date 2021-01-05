@@ -428,6 +428,10 @@ function print_symbols($symbols) {
   print_r($symbols);
 }
 
+function print_histories($histories) {
+  print_r($histories);
+}
+
 function arg_symbol_clear($args=[]) {
   global $db;
 
@@ -436,7 +440,24 @@ function arg_symbol_clear($args=[]) {
 }
 
 function arg_history_list($args=[]) {
+  global $db;
 
+  $length = count($args);
+  if($length === 1) {
+    $regex = '/([0-9]+)-([0-9]+)-([0-9]+)/i';
+    if(preg_match($regex, $args[0])) {
+      // $histories = $db->selects("history", [], "ORDER BY `epoch` DESC");
+      // print_histories($histories);
+    }
+    else {
+      $histories = $db->selects("history", [], "ORDER BY `epoch` DESC");
+      print_histories($histories);
+    }
+  }
+  else {
+    $histories = $db->selects("history", [], "ORDER BY `epoch` DESC");
+    print_histories($histories);
+  }
 }
 
 function arg_history_clear($args=[]) {
