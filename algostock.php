@@ -1,4 +1,11 @@
 <?php
+/*
+ * @Name: Algo Stock
+ * @Author: Max Base
+ * @Date: 2021-01-05
+ * @Repository: https://github.com/BaseMax/AlgoStock
+ */
+
 require "phpedb.php";
 require "netphp.php";
 
