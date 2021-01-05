@@ -30,7 +30,7 @@ $db->db="algostock";
 $db->connect("localhost", "root", "");
 
 if($debug === true) {
-	logs($argv);
+  logs($argv);
 }
 
 function n2n($num) {
@@ -38,16 +38,16 @@ function n2n($num) {
 }
 
 function logs($message) {
-	global $debug;
+  global $debug;
 
-	if($debug) {
-		if(is_array($message)) {
-			print_r($message);
-		}
-		else {
-			print($message."\r\n");
-		}
-	}
+  if($debug) {
+    if(is_array($message)) {
+      print_r($message);
+    }
+    else {
+      print($message."\r\n");
+    }
+  }
 }
 
 function update_history_symbol($symbol) {
@@ -69,7 +69,7 @@ function update_history_symbol($symbol) {
     $startTime = 0;
   }
   else {
-  	// print_r($last_time);
+    // print_r($last_time);
     $startTime = ((int) substr($last_time["epoch"], 0, -3)) + 1;
     $startTime = 0;
   }
@@ -77,16 +77,16 @@ function update_history_symbol($symbol) {
   $endTime = strtotime( date("Y/m/d"). " " . TIME_END );
   // $startTime = 0; // just for testing why rsi is not excatly!
 
-	if($debug) {
-		logs($startTime);
-		logs($endTime);
-	}
+  if($debug) {
+    logs($startTime);
+    logs($endTime);
+  }
 
-	// https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1D&startDateTime=0&endDateTime=1609862968&firstDataRequest=true
-	// https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1609773876&endDateTime=1609863398&firstDataRequest=true
-	$url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close%3Atype1&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
+  // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1D&startDateTime=0&endDateTime=1609862968&firstDataRequest=true
+  // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1609773876&endDateTime=1609863398&firstDataRequest=true
+  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close%3Atype1&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
   // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=false';
-	$url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
+  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
   if($debug) {
     logs($url);
   }
@@ -122,27 +122,27 @@ function update_history_symbol($symbol) {
           if(is_array($item)) {
             // print_r($item);
             $clauses = [
-            	"symbolID"=>$symbol["id"],
-            	"epoch"=>$item["time"],
+              "symbolID"=>$symbol["id"],
+              "epoch"=>$item["time"],
             ];
             if($db->count("history", $clauses) === 0) {
               if($debug) {
                 logs("Not found this stock report...");
               }
               $values = [
-              	"symbolID"=>$symbol["id"],
-              	"time"=>getEpochTime($item["time"]),
-              	"date"=>getEpochDate($item["time"]),
-              	"epoch"=>$item["time"],
-              	"price"=>$item["close"],
-              	"volume"=>$item["volume"],
-              	"rsi"=>0,
-              	"ao"=>0,
+                "symbolID"=>$symbol["id"],
+                "time"=>getEpochTime($item["time"]),
+                "date"=>getEpochDate($item["time"]),
+                "epoch"=>$item["time"],
+                "price"=>$item["close"],
+                "volume"=>$item["volume"],
+                "rsi"=>0,
+                "ao"=>0,
               ];
               if($db->insert("history", $values)) {
-				if($debug) {
-					print "New stock record created successfully";
-				}
+        if($debug) {
+          print "New stock record created successfully";
+        }
               } else {
                 if($debug) {
                   print "Insert stock error: " . $db->error;
@@ -189,21 +189,21 @@ function arabicToPersian($string){
 }
 
 function request($method, $url, $headers=[]) {
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
-	curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate");
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+  curl_setopt($ch, CURLOPT_ENCODING, "gzip, deflate");
+  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-	$result = curl_exec($ch);
-	if(curl_errno($ch)) {
-		logs("Curl error ". curl_error($ch));
-		return null;
-	}
-	curl_close($ch);
-	return $result;
+  $result = curl_exec($ch);
+  if(curl_errno($ch)) {
+    logs("Curl error ". curl_error($ch));
+    return null;
+  }
+  curl_close($ch);
+  return $result;
 }
 
 function tehranRequest($link){
@@ -219,220 +219,220 @@ function tehranRequest($link){
 }
 
 function arg_help($args=[], $hasError=false) {
-	if($hasError === true) {
-		print "Error!\r\n\r\n";
-	}
-	print " algostock\r\n";
-	print " Algorithm Tehran Stock Analyzer\r\n";
-	print "\r\n";
-	print "   symbol:\r\n";
-	print "      algostock symbol list: List of symbols\r\n";
-	print "      algostock symbol listAll: List of all symbols\r\n";
-	print "      algostock symbol clear: Clear symbols\r\n";
-	print "      algostock symbol update: Update list of symbols\r\n";
-	print "\r\n";
-	print "   history:\r\n";
-	print "      algostock history list: List of symbols\r\n";
-	print "      algostock history clear: Clear symbols\r\n";
-	print "      algostock history update: Update list of symbols\r\n";
-	print "      algostock history updateToday: Update list of today's symbols\r\n";
-	print "\r\n";
+  if($hasError === true) {
+    print "Error!\r\n\r\n";
+  }
+  print " algostock\r\n";
+  print " Algorithm Tehran Stock Analyzer\r\n";
+  print "\r\n";
+  print "   symbol:\r\n";
+  print "      algostock symbol list: List of symbols\r\n";
+  print "      algostock symbol listAll: List of all symbols\r\n";
+  print "      algostock symbol clear: Clear symbols\r\n";
+  print "      algostock symbol update: Update list of symbols\r\n";
+  print "\r\n";
+  print "   history:\r\n";
+  print "      algostock history list: List of symbols\r\n";
+  print "      algostock history clear: Clear symbols\r\n";
+  print "      algostock history update: Update list of symbols\r\n";
+  print "      algostock history updateToday: Update list of today's symbols\r\n";
+  print "\r\n";
 }
 
 function symbol_update_tehran1() {
-	global $db;
+  global $db;
 
-	$db->database->beginTransaction();
-	$res = tehranRequest("http://www.tsetmc.com/tsev2/data/MarketWatchInit.aspx?h=0&r=0");
-	if($res !== "" and $res !== null) {
-		$items = explode("@", $res);
-		if(isset($items[2])) {
-			$rows = explode(";", $items[2]);
-			foreach($rows as $row) {
-				$cols = explode(",", $row);
-				$clauses = [
-					"name"=>arabicToPersian($cols[2]),
-				];
-				$values = [
-					"name"=>arabicToPersian($cols[2]),
-					"title"=>arabicToPersian($cols[3]),
-					"tsetmcINS"=>$cols[0],
-					"tsetmcID"=>$cols[1],
-				];
-				if($db->count("symbol", $clauses) === 0) {
-					$db->insert("symbol", $values);
-				}
-				else {
-					$db->update("symbol", $clauses, $values);
-				}
-			}
-		}
-		else {
-			logs("Cannot parse response of tsetmc market watch webservice to explode @[2]...");
-		}
-	}
-	else {
-		logs("Cannot get response from tsetmc market watch webservice...");
-	}
-	$db->database->commit();
+  $db->database->beginTransaction();
+  $res = tehranRequest("http://www.tsetmc.com/tsev2/data/MarketWatchInit.aspx?h=0&r=0");
+  if($res !== "" and $res !== null) {
+    $items = explode("@", $res);
+    if(isset($items[2])) {
+      $rows = explode(";", $items[2]);
+      foreach($rows as $row) {
+        $cols = explode(",", $row);
+        $clauses = [
+          "name"=>arabicToPersian($cols[2]),
+        ];
+        $values = [
+          "name"=>arabicToPersian($cols[2]),
+          "title"=>arabicToPersian($cols[3]),
+          "tsetmcINS"=>$cols[0],
+          "tsetmcID"=>$cols[1],
+        ];
+        if($db->count("symbol", $clauses) === 0) {
+          $db->insert("symbol", $values);
+        }
+        else {
+          $db->update("symbol", $clauses, $values);
+        }
+      }
+    }
+    else {
+      logs("Cannot parse response of tsetmc market watch webservice to explode @[2]...");
+    }
+  }
+  else {
+    logs("Cannot get response from tsetmc market watch webservice...");
+  }
+  $db->database->commit();
 }
 
 function symbol_update_tehran2() {
-	global $db;
+  global $db;
 
-	$db->database->beginTransaction();
-	$res = tehranRequest("http://www.tsetmc.com/Loader.aspx?ParTree=111C1417");
-	if($res !== "" and $res !== null) {
-		$ids = [];
-		$inds = [];
-		$names = [];
+  $db->database->beginTransaction();
+  $res = tehranRequest("http://www.tsetmc.com/Loader.aspx?ParTree=111C1417");
+  if($res !== "" and $res !== null) {
+    $ids = [];
+    $inds = [];
+    $names = [];
 
-		$regex = '/<tr>(\s*|)<td>(?<id>[^\<]+)<\/td>/i';
-		preg_match_all($regex, $res, $matches);
-		if(isset($matches["id"])) {
-			$matches = $matches["id"];
-			// print_r($matches);
-			$ids = $matches;
-		}
+    $regex = '/<tr>(\s*|)<td>(?<id>[^\<]+)<\/td>/i';
+    preg_match_all($regex, $res, $matches);
+    if(isset($matches["id"])) {
+      $matches = $matches["id"];
+      // print_r($matches);
+      $ids = $matches;
+    }
 
-		// $regex = '/\&inscode=(?<ins>[^\\\'\"]+)\'([^\>]+|)>(?<name>[^\<]+)<\/a>(\s*|)<\/td>(\s*|)<td/i';
-		$regex = '/\&inscode=(?<ins>[^\\\'\"]+)\'([^\>]+|)>(?<name>[^\<]+)<\/a>/i';
-		preg_match_all($regex, $res, $matches);
-		if(isset($matches["ins"], $matches["name"])) {
-			// print_r($matches["ins"]);
-			// print_r($matches["name"]);
-			$ins = $matches["ins"];
-			$names = $matches["name"];
-		}
+    // $regex = '/\&inscode=(?<ins>[^\\\'\"]+)\'([^\>]+|)>(?<name>[^\<]+)<\/a>(\s*|)<\/td>(\s*|)<td/i';
+    $regex = '/\&inscode=(?<ins>[^\\\'\"]+)\'([^\>]+|)>(?<name>[^\<]+)<\/a>/i';
+    preg_match_all($regex, $res, $matches);
+    if(isset($matches["ins"], $matches["name"])) {
+      // print_r($matches["ins"]);
+      // print_r($matches["name"]);
+      $ins = $matches["ins"];
+      $names = $matches["name"];
+    }
 
-		if(count($ids) * 2 === count($ins) and count($ins) === count($names)) {
-			$length = count($names);
+    if(count($ids) * 2 === count($ins) and count($ins) === count($names)) {
+      $length = count($names);
 
-			// foreach($ids as $i=>$id) {}
-			for($i=0; $i<$length; $i+=2) {
-				$clauses = [
-					"name"=>arabicToPersian($names[$i]),
-				];
-				$values = [
-					"name"=>arabicToPersian($names[$i]),
-					"title"=>arabicToPersian($names[$i+1]),
-					"tsetmcINS"=>$ins[$i],
-					"tsetmcID"=>$ids[(int)$i / 2],
-				];
-				if($db->count("symbol", $clauses) === 0) {
-					$db->insert("symbol", $values);
-				}
-				else {
-					$db->update("symbol", $clauses, $values);
-				}
-			}
-		}
-		else {
-			logs("Count of id, ins, name in second tsetmc market watch webservice is not same...");
-		}
-	}
-	else {
-		logs("Cannot get response from second tsetmc market watch webservice...");
-	}
-	$db->database->commit();
+      // foreach($ids as $i=>$id) {}
+      for($i=0; $i<$length; $i+=2) {
+        $clauses = [
+          "name"=>arabicToPersian($names[$i]),
+        ];
+        $values = [
+          "name"=>arabicToPersian($names[$i]),
+          "title"=>arabicToPersian($names[$i+1]),
+          "tsetmcINS"=>$ins[$i],
+          "tsetmcID"=>$ids[(int)$i / 2],
+        ];
+        if($db->count("symbol", $clauses) === 0) {
+          $db->insert("symbol", $values);
+        }
+        else {
+          $db->update("symbol", $clauses, $values);
+        }
+      }
+    }
+    else {
+      logs("Count of id, ins, name in second tsetmc market watch webservice is not same...");
+    }
+  }
+  else {
+    logs("Cannot get response from second tsetmc market watch webservice...");
+  }
+  $db->database->commit();
 }
 
 function symbol_update_rahavard1() {
-	global $db;
+  global $db;
 
-	$db->database->beginTransaction();
-	$res = tehranRequest("https://rahavard365.com/stock?last_trade=any");
-	if($res !== "" and $res !== null) {
-		$regex = '/var layoutModel = (?<object>[^\;]+)/i';
-		preg_match($regex, $res, $match);
-		if(isset($match["object"]) and $match["object"] !== "") {
-			$object = $match["object"];
-			$object = json_decode($object, true);
-			if(is_array($object) and $object !== []) {
-				if(isset($object["asset_data_list"])) {
-					$object = $object["asset_data_list"];
-					foreach($object as $i=>$item) {
-						if(isset($item["asset"])) {
-							if(!isset($item["asset"]["trade_symbol"]) || !isset($item["asset"]["entity"]["id"]) || !isset($item["asset"]["name"])) {
-								// print_r($item["asset"]);
-								continue;
-							}
-							$clauses = [
-								"name"=>arabicToPersian($item["asset"]["trade_symbol"]),
-							];
-							$values = [
-								"name"=>arabicToPersian($item["asset"]["trade_symbol"]),
-								"title"=>arabicToPersian($item["asset"]["name"]),
-								"rahavardID"=>$item["asset"]["entity"]["id"],
-							];
-							if($db->count("symbol", $clauses) === 0) {
-								$db->insert("symbol", $values);
-							}
-							else {
-								$db->update("symbol", $clauses, $values);
-							}
-						}
-						else {
-							logs("Cannot parse `asset` in asset_data_list object of rahavard market watch webservice...");
-						}
-					}
-				}
-				else {
-					logs("Cannot parse `asset_data_list` from object of rahavard market watch webservice...");
-				}
-			}
-			else {
-				logs("Cannot parse object as JSON of rahavard market watch webservice...");
-			}
-		}
-		else {
-			logs("Cannot parse response of rahavard market watch webservice...");
-		}
-	}
-	else {
-		logs("Cannot get response from rahavard market watch webservice...");
-	}
-	$db->database->commit();
+  $db->database->beginTransaction();
+  $res = tehranRequest("https://rahavard365.com/stock?last_trade=any");
+  if($res !== "" and $res !== null) {
+    $regex = '/var layoutModel = (?<object>[^\;]+)/i';
+    preg_match($regex, $res, $match);
+    if(isset($match["object"]) and $match["object"] !== "") {
+      $object = $match["object"];
+      $object = json_decode($object, true);
+      if(is_array($object) and $object !== []) {
+        if(isset($object["asset_data_list"])) {
+          $object = $object["asset_data_list"];
+          foreach($object as $i=>$item) {
+            if(isset($item["asset"])) {
+              if(!isset($item["asset"]["trade_symbol"]) || !isset($item["asset"]["entity"]["id"]) || !isset($item["asset"]["name"])) {
+                // print_r($item["asset"]);
+                continue;
+              }
+              $clauses = [
+                "name"=>arabicToPersian($item["asset"]["trade_symbol"]),
+              ];
+              $values = [
+                "name"=>arabicToPersian($item["asset"]["trade_symbol"]),
+                "title"=>arabicToPersian($item["asset"]["name"]),
+                "rahavardID"=>$item["asset"]["entity"]["id"],
+              ];
+              if($db->count("symbol", $clauses) === 0) {
+                $db->insert("symbol", $values);
+              }
+              else {
+                $db->update("symbol", $clauses, $values);
+              }
+            }
+            else {
+              logs("Cannot parse `asset` in asset_data_list object of rahavard market watch webservice...");
+            }
+          }
+        }
+        else {
+          logs("Cannot parse `asset_data_list` from object of rahavard market watch webservice...");
+        }
+      }
+      else {
+        logs("Cannot parse object as JSON of rahavard market watch webservice...");
+      }
+    }
+    else {
+      logs("Cannot parse response of rahavard market watch webservice...");
+    }
+  }
+  else {
+    logs("Cannot get response from rahavard market watch webservice...");
+  }
+  $db->database->commit();
 }
 
 function arg_symbol_update($args=[]) {
-	// Tehran
-	symbol_update_tehran1();
-	symbol_update_tehran2();
+  // Tehran
+  symbol_update_tehran1();
+  symbol_update_tehran2();
 
-	// Rahavard
-	symbol_update_rahavard1();
-	print "Done updating.\r\n";
+  // Rahavard
+  symbol_update_rahavard1();
+  print "Done updating.\r\n";
 }
 
 function get_symbol_list() {
-	global $db;
+  global $db;
 
-	$symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol` WHERE `rahavardID` IS NOT NULL AND `tsetmcID` IS NOT NULL AND `tsetmcINS` IS NOT NULL;");
-	return $symbols;
+  $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol` WHERE `rahavardID` IS NOT NULL AND `tsetmcID` IS NOT NULL AND `tsetmcINS` IS NOT NULL;");
+  return $symbols;
 }
 
 function arg_symbol_list($args=[]) {
-	$symbols = get_symbol_list();
-	print_symbols($symbols);
+  $symbols = get_symbol_list();
+  print_symbols($symbols);
 }
 
 function arg_symbol_listall($args=[]) {
-	global $db;
+  global $db;
 
-	$symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol`;");
-	print_symbols($symbols);
+  $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol`;");
+  print_symbols($symbols);
 }
 
 function print_symbols($symbols) {
-	print_r($symbols);
+  print_r($symbols);
 }
 
 function arg_symbol_clear($args=[]) {
-	global $db;
+  global $db;
 
-	$db->delete("symbol", []);
-	print "Dlete all symbols.\r\n";
+  $db->delete("symbol", []);
+  print "Dlete all symbols.\r\n";
 }
 
 function arg_history_list($args=[]) {
@@ -440,23 +440,23 @@ function arg_history_list($args=[]) {
 }
 
 function arg_history_clear($args=[]) {
-	global $db;
+  global $db;
 
-	$db->delete("history", []);
-	print "Delete all histories.\r\n";
+  $db->delete("history", []);
+  print "Delete all histories.\r\n";
 }
 
 function arg_history_update($args=[]) {
-	global $db;
+  global $db;
 
-	$symbols = get_symbol_list();
-	$symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
-	foreach($symbols as $symbol) {
-		print_r($symbol);
-		update_history_symbol($symbol);
-		break;
-		sleep(2);
-	}
+  $symbols = get_symbol_list();
+  $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
+  foreach($symbols as $symbol) {
+    print_r($symbol);
+    update_history_symbol($symbol);
+    break;
+    sleep(2);
+  }
 }
 
 function getEpochDate($epoch) {
@@ -468,88 +468,88 @@ function getEpochTime($epoch) {
 }
 
 function arg_history_updatetoday($args=[]) {
-	
+  
 }
 
 function main() {
-	global $argv;
+  global $argv;
 
-	$length = count($argv);
-	if($length > 1) {
-		$argv[1] = strtolower($argv[1]);
-	}
+  $length = count($argv);
+  if($length > 1) {
+    $argv[1] = strtolower($argv[1]);
+  }
 
-	if($length === 1) {
-		arg_help($argv);
-	}
-	else if($length > 1 and $argv[1] === "help") {
-		arg_help($argv);
-	}
-	else if($length > 1) {
-		switch($argv[1]) {
-		case "history":
-			if(!isset($argv[2])) {
-				$argv[2]=null;
-			}
-			switch(strtolower($argv[2])) {
-				case "list":
-					array_shift($argv);
-					array_shift($argv);
-					arg_history_list($argv);
-					break;
-				case "clear":
-					array_shift($argv);
-					array_shift($argv);
-					arg_history_clear($argv);
-					break;
-				case "update":
-					array_shift($argv);
-					array_shift($argv);
-					arg_history_update($argv);
-					break;
-				case "updatetoday":
-					array_shift($argv);
-					array_shift($argv);
-					arg_history_updatetoday($argv);
-					break;
-				default:
-					arg_help($argv, true);
-			}
-			break;
-		case "symbol":
-			if(!isset($argv[2])) {
-				$argv[2]=null;
-			}
-			switch(strtolower($argv[2])) {
-				case "list":
-					array_shift($argv);
-					array_shift($argv);
-					arg_symbol_list($argv);
-					break;
-				case "listall":
-					array_shift($argv);
-					array_shift($argv);
-					arg_symbol_listall($argv);
-					break;
-				case "clear":
-					array_shift($argv);
-					array_shift($argv);
-					arg_symbol_clear($argv);
-					break;
-				case "update":
-					array_shift($argv);
-					array_shift($argv);
-					arg_symbol_update($argv);
-					break;
-				default:
-					arg_help($argv, true);
-			}
-			break;
-		default:
-			logs("Algostock not support this argument method, you can check help section.");
-			break;
-		}
-	}
+  if($length === 1) {
+    arg_help($argv);
+  }
+  else if($length > 1 and $argv[1] === "help") {
+    arg_help($argv);
+  }
+  else if($length > 1) {
+    switch($argv[1]) {
+    case "history":
+      if(!isset($argv[2])) {
+        $argv[2]=null;
+      }
+      switch(strtolower($argv[2])) {
+        case "list":
+          array_shift($argv);
+          array_shift($argv);
+          arg_history_list($argv);
+          break;
+        case "clear":
+          array_shift($argv);
+          array_shift($argv);
+          arg_history_clear($argv);
+          break;
+        case "update":
+          array_shift($argv);
+          array_shift($argv);
+          arg_history_update($argv);
+          break;
+        case "updatetoday":
+          array_shift($argv);
+          array_shift($argv);
+          arg_history_updatetoday($argv);
+          break;
+        default:
+          arg_help($argv, true);
+      }
+      break;
+    case "symbol":
+      if(!isset($argv[2])) {
+        $argv[2]=null;
+      }
+      switch(strtolower($argv[2])) {
+        case "list":
+          array_shift($argv);
+          array_shift($argv);
+          arg_symbol_list($argv);
+          break;
+        case "listall":
+          array_shift($argv);
+          array_shift($argv);
+          arg_symbol_listall($argv);
+          break;
+        case "clear":
+          array_shift($argv);
+          array_shift($argv);
+          arg_symbol_clear($argv);
+          break;
+        case "update":
+          array_shift($argv);
+          array_shift($argv);
+          arg_symbol_update($argv);
+          break;
+        default:
+          arg_help($argv, true);
+      }
+      break;
+    default:
+      logs("Algostock not support this argument method, you can check help section.");
+      break;
+    }
+  }
 }
 
 main();
