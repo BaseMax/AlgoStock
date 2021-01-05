@@ -1,7 +1,8 @@
 <?php
-date_default_timezone_set("Asia/Tehran");
 require "phpedb.php";
 require "netphp.php";
+
+date_default_timezone_set("Asia/Tehran");
 
 define("TIME_START", "01:00:00am");
 // define("TIME_START", "07:50:00am");
