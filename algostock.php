@@ -90,7 +90,7 @@ function update_history_symbol($symbol, $startTime, $endTime) {
     }
     else {
       logs("JSON Length: ".strlen($result));
-      if($json == null) {
+      if($json === null) {
         logs("JSON Response is not valid!");
       }
       else {
