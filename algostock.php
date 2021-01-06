@@ -140,9 +140,9 @@ function update_history_symbol($symbol) {
                 "ao"=>0,
               ];
               if($db->insert("history", $values)) {
-        if($debug) {
-          print "New stock record created successfully";
-        }
+                if($debug) {
+                  print "New stock record created successfully";
+                }
               } else {
                 if($debug) {
                   print "Insert stock error: " . $db->error;
@@ -446,8 +446,8 @@ function arg_history_list($args=[]) {
   if($length === 1) {
     $regex = '/([0-9]+)-([0-9]+)-([0-9]+)/i';
     if(preg_match($regex, $args[0])) {
-      // $histories = $db->selects("history", [], "ORDER BY `epoch` DESC");
-      // print_histories($histories);
+      $histories = $db->selects("history", ["date"=>$args[0]], "ORDER BY `epoch` DESC");
+      print_histories($histories);
     }
     else {
       $histories = $db->selects("history", [], "ORDER BY `epoch` DESC");
