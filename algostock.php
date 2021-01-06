@@ -50,34 +50,13 @@ function logs($message) {
   }
 }
 
-function update_history_symbol($symbol) {
+function update_history_symbol($symbol, $startTime, $endTime) {
   global $db;
   // global $DAY_IN_BACK;
   global $debug;
 
   if($debug) {
     logs($symbol);
-  }
-
-  // $sql = "SELECT epoch FROM $db->db.`stock` WHERE `symbolID` = '". $symbol["id"] ."' ORDER BY epoch DESC LIMIT 1";
-  // $last_time = $db->selectRaw($sql);
-
-  $last_time = $db->select("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` DESC LIMIT 1", "epoch");
-  if($last_time === null || $last_time === []) {
-    // $startTime = strtotime( date("Y/m/d"). " " . TIME_START );
-    // $startTime -= $DAY_IN_BACK * DAY_IN_UNIX;
-    $startTime = 0;
-  }
-  else {
-    // print_r($last_time);
-    $startTime = ((int) substr($last_time["epoch"], 0, -3)) + 1;
-    $startTime = 0;
-  }
-
-  $endTime = strtotime( date("Y/m/d"). " " . TIME_END );
-  // $startTime = 0; // just for testing why rsi is not excatly!
-
-  if($debug) {
     logs($startTime);
     logs($endTime);
   }
@@ -85,8 +64,8 @@ function update_history_symbol($symbol) {
   // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1D&startDateTime=0&endDateTime=1609862968&firstDataRequest=true
   // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1609773876&endDateTime=1609863398&firstDataRequest=true
   $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close%3Atype1&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
-  // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=false';
-  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
+  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=false';
+  // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
   if($debug) {
     logs($url);
   }
@@ -467,16 +446,47 @@ function arg_history_clear($args=[]) {
   print "Delete all histories.\r\n";
 }
 
-function arg_history_update($args=[]) {
+function get_last_time_of_symbol($symbolID) {
   global $db;
 
+  // $sql = "SELECT epoch FROM $db->db.`stock` WHERE `symbolID` = '". $symbolID ."' ORDER BY epoch DESC LIMIT 1";
+  // $last_time = $db->selectRaw($sql);
+  $last_time = $db->select("history", ["symbolID"=>$symbolID], "ORDER BY `epoch` DESC LIMIT 1", "epoch");
+  if($last_time === null || $last_time === []) {
+    $startTime = strtotime( date("Y/m/d"). " " . TIME_START );
+    $startTime -= $DAY_IN_BACK * DAY_IN_UNIX;
+    $startTime = 0;
+  }
+  else {
+    // print_r($last_time);
+    $startTime = ((int) substr($last_time["epoch"], 0, -3)) + 1;
+    // $startTime = 0; // just for testing
+  }
+  return $startTime;
+}
+
+function arg_history_update($args=[]) {
+  global $db;
+  global $debug;
+
+  $length = count($args);
   $symbols = get_symbol_list();
   $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
-    print_r($symbol);
-    update_history_symbol($symbol);
-    break;
-    sleep(2);
+    if($debug) {
+      logs($symbol);
+    }
+    
+    if($length === 1) {
+        $startTime = $args[0];
+    }
+    else {
+        $startTime = get_last_time_of_symbol($symbol["id"]);
+    }
+    $endTime = strtotime( date("Y/m/d"). " " . TIME_END );
+
+    update_history_symbol($symbol, $startTime, $endTime);
+    sleep(3);
   }
 }
 
@@ -489,7 +499,7 @@ function getEpochTime($epoch) {
 }
 
 function arg_history_updatetoday($args=[]) {
-  
+  arg_history_update(getEpochDate(time()));
 }
 
 function main() {
