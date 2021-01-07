@@ -64,8 +64,8 @@ function update_history_symbol($symbol, $startTime, $endTime) {
   // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1D&startDateTime=0&endDateTime=1609862968&firstDataRequest=true
   // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1609773876&endDateTime=1609863398&firstDataRequest=true
   $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close%3Atype1&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
-  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=false';
-  // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
+  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
+  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
   if($debug) {
     logs($url);
   }
@@ -99,25 +99,32 @@ function update_history_symbol($symbol, $startTime, $endTime) {
         $db->database->beginTransaction();
         foreach($json as $item) {
           if(is_array($item)) {
+            print ".";
             // print_r($item);
             $clauses = [
               "symbolID"=>$symbol["id"],
               "epoch"=>$item["time"],
             ];
+
+            $values = [
+              "symbolID"=>$symbol["id"],
+              "time"=>getEpochTime($item["time"]),
+              "date"=>getEpochDate($item["time"]),
+              "epoch"=>$item["time"],
+              "low"=>$item["low"],
+              "high"=>$item["high"],
+              "open"=>$item["open"],
+              "close"=>$item["close"],
+              "volume"=>$item["volume"],
+              "rsi"=>0,
+              "ao"=>0,
+            ];
+
             if($db->count("history", $clauses) === 0) {
               if($debug) {
                 logs("Not found this stock report...");
               }
-              $values = [
-                "symbolID"=>$symbol["id"],
-                "time"=>getEpochTime($item["time"]),
-                "date"=>getEpochDate($item["time"]),
-                "epoch"=>$item["time"],
-                "price"=>$item["close"],
-                "volume"=>$item["volume"],
-                "rsi"=>0,
-                "ao"=>0,
-              ];
+
               if($db->insert("history", $values)) {
                 if($debug) {
                   print "New stock record created successfully";
@@ -129,6 +136,10 @@ function update_history_symbol($symbol, $startTime, $endTime) {
               }
 
             }
+            else {
+              $db->update("history", $clauses, $values);
+            }
+
           }
         }
         $db->database->commit();
@@ -484,6 +495,7 @@ function arg_history_update($args=[]) {
         $startTime = get_last_time_of_symbol($symbol["id"]);
     }
     $endTime = strtotime( date("Y/m/d"). " " . TIME_END );
+    $startTime = 0;
 
     update_history_symbol($symbol, $startTime, $endTime);
     sleep(3);
@@ -500,6 +512,113 @@ function getEpochTime($epoch) {
 
 function arg_history_updatetoday($args=[]) {
   arg_history_update(getEpochDate(time()));
+}
+
+/**
+ Moving Average Convergence/Divergence
+ */
+function trade_macd($data=null, $fastPeriod=10, $slowPeriod = 5, $signalPeriod=7) {
+  return trader_macd($data, $fastPeriod, $slowPeriod, $signalPeriod);
+}
+
+/**
+ Rate of change ratio: (price/prevPrice)
+ */
+function trade_rocr($data=null, $timePeriod = 10) {
+  return trader_rocr($data, $timePeriod);
+}
+
+/**
+ Relative Strength Index
+ **/
+function trade_rsi($data=null, $timePeriod=14) {
+  return trader_rsi($data, $timePeriod);
+}
+
+/**
+ Awesome Oscillator
+ https://github.com/joeldg/bowhead/blob/master/app/Util/Indicators.php#L431
+ https://www.tradingview.com/wiki/Awesome_Oscillator_(AO)
+ AO = SMA(High+Low)/2, 5 Periods) - SMA(High+Low/2, 34 Periods)
+ **/
+function trade_ao($data=null, $return_raw=false) {
+  $data["mid"] = [];
+  foreach($data["high"] as $high_key => $high_alue) {
+    $data["mid"][$high_key] = (($data["high"][$high_key] + $data["low"][$high_key])/2);
+  }
+  $ao_sma_1 = trader_sma($data["mid"], 5);
+  $ao_sma_2 = trader_sma($data["mid"], 34);
+  array_pop($data["mid"]);
+  $ao_sma_3 = trader_sma($data["mid"], 5);
+  $ao_sma_4 = trader_sma($data["mid"], 34);
+  if ($return_raw) {
+    // print_r($ao_sma_1);
+    // print_r($ao_sma_2);
+    $r = [];
+    foreach($ao_sma_1 as $i=>$v1) {
+      $v2 = 0;
+      if(isset($ao_sma_2[$i])) {
+        $v2 = $ao_sma_2[$i];
+      }
+      $r [] = $v1 - $v2;
+    }
+    return $r;
+    // return ($ao_sma_1 - $ao_sma_2); // return the actual values of the oscillator
+  } else {
+    $ao_prior = (array_pop($ao_sma_3) - array_pop($ao_sma_4)); // last "tick"
+    $ao_now   = (array_pop($ao_sma_1) - array_pop($ao_sma_2)); // current "tick"
+    /** Bullish cross */
+    if ($ao_prior <= 0 && $ao_now > 0) {
+      return 100;
+    /** Bearish cross */
+    } elseif($ao_prior >= 0 && $ao_now < 0){
+      return -100;
+    } else {
+      return 0;
+    }
+  }
+}
+
+function arg_indicator_update($args=[]) {
+  global $db;
+
+  $symbols = get_symbol_list();
+  $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
+  foreach($symbols as $symbol) {
+    $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC", "id,price");
+    print count($histories);
+
+    $prices = array_map(function($history) {
+        return $history["price"];
+    }, $histories);
+    print count($prices);
+
+    $rsi = trade_rsi($prices, 14);
+    // $ao = trade_ao($prices, true);
+    // print_r($rsi);
+
+    $db->database->beginTransaction();
+    foreach($histories as $i=>$history) {
+      $values = [];
+
+      if(isset($rsi[$i])) {
+        $values["rsi"] = $rsi[$i];
+      }
+      else {
+        $values["rsi"] = null;
+      }
+
+      // if(isset($ao[$i])) {
+      //   $values["ao"] = $ao[$i];
+      // }
+      // else {
+      //   $values["ao"] = null;
+      // }
+
+      $db->update("history", ["id"=>$history["id"]], $values);
+    }
+    $db->database->commit();
+  }
 }
 
 function main() {
@@ -547,6 +666,20 @@ function main() {
           arg_help($argv, true);
       }
       break;
+    case "indicator":
+      if(!isset($argv[2])) {
+        $argv[2]=null;
+      }
+      switch(strtolower($argv[2])) {
+        case "update":
+          array_shift($argv);
+          array_shift($argv);
+          arg_indicator_update($argv);
+          break;
+        default:
+          arg_help($argv, true);
+      }
+      break;
     case "symbol":
       if(!isset($argv[2])) {
         $argv[2]=null;
@@ -584,4 +717,3 @@ function main() {
 }
 
 main();
-
