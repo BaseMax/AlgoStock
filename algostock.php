@@ -2,7 +2,7 @@
 /*
  * @Name: Algo Stock
  * @Author: Max Base
- * @Date: 2021-01-05, 2021-01-08, 2021-01-09
+ * @Date: 2021-01-05
  * @Repository: https://github.com/BaseMax/AlgoStock
  */
 
@@ -584,6 +584,12 @@ function trade_ao($data=null, $return_raw=false) {
       return 0;
     }
   }
+}
+
+function arg_indicator_clear($args=[]) {
+  global $db;
+
+  $db->update("history", [], ["rsi"=>null, "ao"=>null]);
 }
 
 function arg_indicator_update($args=[]) {
