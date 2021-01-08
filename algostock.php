@@ -2,7 +2,7 @@
 /*
  * @Name: Algo Stock
  * @Author: Max Base
- * @Date: 2021-01-05
+ * @Date: 2021-01-05, 2021-01-08, 2021-01-09
  * @Repository: https://github.com/BaseMax/AlgoStock
  */
 
@@ -63,12 +63,14 @@ function update_history_symbol($symbol, $startTime, $endTime) {
 
   // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1D&startDateTime=0&endDateTime=1609862968&firstDataRequest=true
   // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1609773876&endDateTime=1609863398&firstDataRequest=true
-  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close%3Atype1&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
-  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
-  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime=1&endDateTime=1609747736&firstDataRequest=false';
+  // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close%3Atype1&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
+  // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'. $symbol["rahavardID"] .'%3Areal_close&resolution=1&startDateTime='. $startTime .'&endDateTime='. $endTime .'&firstDataRequest=true';
+  // $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A591%3Areal_close%3Atype1&resolution=1&startDateTime='.$startTime.'&endDateTime='.$endTime.'&firstDataRequest=false';
+  $url = 'https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A'.$symbol["rahavardID"].'%3Areal_close&resolution=1&startDateTime='.$startTime.'&endDateTime='.$endTime.'&firstDataRequest=false';
   if($debug) {
     logs($url);
   }
+  print($url."\n");
   $headers = [
     'Connection: keep-alive',
     'Accept: */*',
@@ -81,16 +83,18 @@ function update_history_symbol($symbol, $startTime, $endTime) {
     'Accept-Language: en,fa;q=0.9',
     'Cookie: __RequestVerificationToken=1KTHAtgKp3ExZCLUjruVbrN4Wni3dC5KtT7AZhIjvSEN1kkELE0Pw_FXKUCM0OsasZL6xm23r2ePw4-jG5N8qklX4Ac1; .rahavard365auth=6F3AFDA282A4E5C5BA0BF6DC4F694254E0339C17E770C247DF50142472E07C57C433BDA7770583BBC500A466B1BCF7127801C201D80169D7B24D50CC6A2F8C9621E990D9D087F161603EB3586BE9B3A1333BA20B424BC745A624946CD2EAA3E81523133F868D8477DE9A8AB41F09F1FC84D2AF97A7EF68CE219229EF75D4F5462383C00D2EAC97E06A2CF0DDA4CA1F17D343924A769E1739D18FCE4FC2B12F37CFF7CBFB534F547035332EF217E6073CECA47E5855905131E6F5D3F3DF113BA9E595ECD8BD8668EB035B399DE07E505039FED24CE297740B6471994CAA110FA404F76F5B; pro.package.state.905874=False; pro.package.905874=12/9/2020 3:14:53 AM',
   ];
-  $result = request("get", $url, $headers);
+  $json = request("get", $url, $headers);
+  file_put_contents("temp.json", $json);
   // print_r($result);
-  if($result) {
-    $json = json_decode($result, true);
+  if($json) {
+    $json = json_decode($json, true);
     if(isset($json["noData"])) {
       logs("The empty JSON");
     }
     else {
-      logs("JSON Length: ".strlen($result));
-      if($json === null) {
+      // logs("JSON Length: ".strlen($json));
+      // print("JSON Length: ".count($json)."\n");
+      if($json === null || $json === []) {
         logs("JSON Response is not valid!");
       }
       else {
@@ -99,7 +103,6 @@ function update_history_symbol($symbol, $startTime, $endTime) {
         $db->database->beginTransaction();
         foreach($json as $item) {
           if(is_array($item)) {
-            print ".";
             // print_r($item);
             $clauses = [
               "symbolID"=>$symbol["id"],
@@ -121,6 +124,7 @@ function update_history_symbol($symbol, $startTime, $endTime) {
             ];
 
             if($db->count("history", $clauses) === 0) {
+              print ".";
               if($debug) {
                 logs("Not found this stock report...");
               }
@@ -137,7 +141,7 @@ function update_history_symbol($symbol, $startTime, $endTime) {
 
             }
             else {
-              $db->update("history", $clauses, $values);
+              // $db->update("history", $clauses, $values);
             }
 
           }
@@ -494,9 +498,12 @@ function arg_history_update($args=[]) {
     else {
         $startTime = get_last_time_of_symbol($symbol["id"]);
     }
+    $startTime = 1483894017;// 947350017;
+    $startTime = 1605835337-1;
+    $endTime = 1605835337;
     $endTime = strtotime( date("Y/m/d"). " " . TIME_END );
-    $startTime = 0;
 
+    // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A772%3Areal_close&resolution=1&startDateTime=1&endDateTime=1605835337&firstDataRequest=false
     update_history_symbol($symbol, $startTime, $endTime);
     sleep(3);
   }
@@ -585,39 +592,77 @@ function arg_indicator_update($args=[]) {
   $symbols = get_symbol_list();
   $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
-    $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC", "id,price");
+    // $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC", "id,low,high,close");
+    $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC LIMIT 5000", "id,low,high,close");
     print count($histories);
 
     $prices = array_map(function($history) {
-        return $history["price"];
+        return $history["close"];
     }, $histories);
     print count($prices);
-
     $rsi = trade_rsi($prices, 14);
-    // $ao = trade_ao($prices, true);
-    // print_r($rsi);
+    unset($prices);
 
     $db->database->beginTransaction();
     foreach($histories as $i=>$history) {
       $values = [];
-
       if(isset($rsi[$i])) {
         $values["rsi"] = $rsi[$i];
       }
       else {
         $values["rsi"] = null;
       }
-
-      // if(isset($ao[$i])) {
-      //   $values["ao"] = $ao[$i];
-      // }
-      // else {
-      //   $values["ao"] = null;
-      // }
-
       $db->update("history", ["id"=>$history["id"]], $values);
     }
     $db->database->commit();
+    unset($rsi);
+
+
+    $columns = [];
+    $columns["low"] = array_map(function($history) {
+        return $history["low"];
+    }, $histories);
+
+    $columns["high"] = array_map(function($history) {
+        return $history["high"];
+    }, $histories);
+
+    $columns = trade_ao($columns, true);
+    // print_r($ao);
+
+    $db->database->beginTransaction();
+    foreach($histories as $i=>$history) {
+      $values = [];
+      if(isset($columns[$i])) {
+        $values["ao"] = $columns[$i];
+      }
+      else {
+        $values["ao"] = null;
+      }
+      $db->update("history", ["id"=>$history["id"]], $values);
+    }
+    $db->database->commit();
+
+    // foreach($histories as $i=>$history) {
+    //   $values = [];
+
+    //   if(isset($rsi[$i])) {
+    //     $values["rsi"] = $rsi[$i];
+    //   }
+    //   else {
+    //     $values["rsi"] = null;
+    //   }
+
+    //   if(isset($ao[$i])) {
+    //     $values["ao"] = $ao[$i];
+    //   }
+    //   else {
+    //     $values["ao"] = null;
+    //   }
+
+    //   $db->update("history", ["id"=>$history["id"]], $values);
+    // }
+    // $db->database->commit();
   }
 }
 
@@ -675,6 +720,11 @@ function main() {
           array_shift($argv);
           array_shift($argv);
           arg_indicator_update($argv);
+          break;
+        case "clear":
+          array_shift($argv);
+          array_shift($argv);
+          arg_indicator_clear($argv);
           break;
         default:
           arg_help($argv, true);
