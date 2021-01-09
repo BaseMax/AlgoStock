@@ -595,7 +595,7 @@ function arg_indicator_clear($args=[]) {
 function arg_indicator_update($args=[]) {
   global $db;
 
-  $paging = 20000;
+  $paging = 1000;
   $symbols = get_symbol_list();
   $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
@@ -606,16 +606,37 @@ function arg_indicator_update($args=[]) {
 
     // $sql = "ORDER BY `epoch` ASC";
     for($page = 1; $page <= $pageAll; $page++) {
-      $sql = "ORDER BY `epoch` ASC LIMIT 100000 OFFSET ". ($page - 1) * $paging;
-      $histories = $db->selects("history", $clauses, $sql, "id,low,high,close");
+      $sql = "ORDER BY `epoch` ASC LIMIT ".$paging." OFFSET ". ($page - 1) * $paging;
+      $histories = $db->selects("history", $clauses, $sql, "id,low,high,open,close");
       print count($histories);
+      print "\t";
+      file_put_contents("temp.txt", print_r($histories, true)."\n-----\n");
 
-      $prices = array_map(function($history) {
+      $closes = array_map(function($history) {
           return $history["close"];
       }, $histories);
-      print count($prices);
-      $rsi = trade_rsi($prices, 14);
-      unset($prices);
+      // print count($closes);
+      // print "\t";
+      $rsi = trade_rsi($closes, 14);
+      print count($rsi);
+      print "\t";
+      file_put_contents("temp.txt", print_r($closes, true)."\n-----\n", FILE_APPEND);
+      unset($closes);
+
+      $columns = [];
+      $columns["low"] = array_map(function($history) {
+          return $history["low"];
+      }, $histories);
+
+      $columns["high"] = array_map(function($history) {
+          return $history["high"];
+      }, $histories);
+      $columns = trade_ao($columns, true);
+      // print_r($columns);
+      print count($columns);
+      print "\n";
+      file_put_contents("temp.txt", print_r($columns, true)."\n-----\n", FILE_APPEND);
+
 
       $db->database->beginTransaction();
       foreach($histories as $i=>$history) {
@@ -626,59 +647,20 @@ function arg_indicator_update($args=[]) {
         else {
           $values["rsi"] = null;
         }
-        $db->update("history", ["id"=>$history["id"]], $values);
-      }
-      $db->database->commit();
-      unset($rsi);
 
-      $columns = [];
-      $columns["low"] = array_map(function($history) {
-          return $history["low"];
-      }, $histories);
-
-      $columns["high"] = array_map(function($history) {
-          return $history["high"];
-      }, $histories);
-
-      $columns = trade_ao($columns, true);
-      // print_r($columns);
-
-      $db->database->beginTransaction();
-      foreach($histories as $i=>$history) {
-        $values = [];
         if(isset($columns[$i])) {
           $values["ao"] = $columns[$i];
         }
         else {
           $values["ao"] = null;
         }
+
         $db->update("history", ["id"=>$history["id"]], $values);
       }
       $db->database->commit();
+      unset($rsi);
+      unset($ao);
       unset($histories);
-
-      // foreach($histories as $i=>$history) {
-      //   $values = [];
-
-      //   if(isset($rsi[$i])) {
-      //     $values["rsi"] = $rsi[$i];
-      //   }
-      //   else {
-      //     $values["rsi"] = null;
-      //   }
-
-      //   if(isset($ao[$i])) {
-      //     $values["ao"] = $ao[$i];
-      //   }
-      //   else {
-      //     $values["ao"] = null;
-      //   }
-
-      //   $db->update("history", ["id"=>$history["id"]], $values);
-      // }
-      // $db->database->commit();
-
-
     }
   }
 }
