@@ -14,7 +14,7 @@ Help:
 
    symbol:
       algostock symbol list: List of symbols
-      algostock symbol listAll: List of all symbols
+      algostock symbol list all: List of all symbols
       algostock symbol clear: Clear symbols
       algostock symbol update: Update list of symbols
 
@@ -22,7 +22,13 @@ Help:
       algostock history list: List of symbols
       algostock history clear: Clear symbols
       algostock history update: Update list of symbols
-      algostock history updateToday: Update list of today's symbols
+      algostock history update last: Update list of today's symbols
+
+
+   indicator:
+      algostock indicator update: Update indicator of all history rows
+      algostock indicator clear: Clear indicator of history rows
+      algostock indicator update last: Update indicator of last history rows
 
 ```
 
