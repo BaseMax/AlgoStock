@@ -595,7 +595,7 @@ function arg_indicator_clear($args=[]) {
 function arg_indicator_update($args=[]) {
   global $db;
 
-  $paging = 1000;
+  $paging = 10000;
   $symbols = get_symbol_list();
   $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
@@ -604,13 +604,28 @@ function arg_indicator_update($args=[]) {
     $count = $db->count("history", $clauses);
     $pageAll = ceil($count / $paging);
 
+    // $histories = $db->selects("history", $clauses, "ORDER BY `epoch` DESC LIMIT 100", "id,low,high,open,close");
+    // print_r($histories);
+    // $columns = [];
+    // $columns["low"] = array_map(function($history) {
+    //     return $history["low"];
+    // }, $histories);
+
+    // $columns["high"] = array_map(function($history) {
+    //     return $history["high"];
+    // }, $histories);
+    // $columns = trade_ao($columns, true);
+    // print_r($columns);
+
+    // exit();
+
     // $sql = "ORDER BY `epoch` ASC";
     for($page = 1; $page <= $pageAll; $page++) {
       $sql = "ORDER BY `epoch` ASC LIMIT ".$paging." OFFSET ". ($page - 1) * $paging;
       $histories = $db->selects("history", $clauses, $sql, "id,low,high,open,close");
-      print count($histories);
-      print "\t";
-      file_put_contents("temp.txt", print_r($histories, true)."\n-----\n");
+      // print count($histories);
+      // print "\t";
+      // file_put_contents("temp.txt", print_r($histories, true)."\n-----\n");
 
       $closes = array_map(function($history) {
           return $history["close"];
@@ -618,9 +633,9 @@ function arg_indicator_update($args=[]) {
       // print count($closes);
       // print "\t";
       $rsi = trade_rsi($closes, 14);
-      print count($rsi);
-      print "\t";
-      file_put_contents("temp.txt", print_r($closes, true)."\n-----\n", FILE_APPEND);
+      // print count($rsi);
+      // print "\t";
+      // file_put_contents("temp.txt", print_r($closes, true)."\n-----\n", FILE_APPEND);
       unset($closes);
 
       $columns = [];
@@ -633,9 +648,9 @@ function arg_indicator_update($args=[]) {
       }, $histories);
       $columns = trade_ao($columns, true);
       // print_r($columns);
-      print count($columns);
-      print "\n";
-      file_put_contents("temp.txt", print_r($columns, true)."\n-----\n", FILE_APPEND);
+      // print count($columns);
+      // print "\n";
+      // file_put_contents("temp.txt", print_r($columns, true)."\n-----\n", FILE_APPEND);
 
 
       $db->database->beginTransaction();
@@ -644,16 +659,16 @@ function arg_indicator_update($args=[]) {
         if(isset($rsi[$i])) {
           $values["rsi"] = $rsi[$i];
         }
-        else {
-          $values["rsi"] = null;
-        }
+        // else {
+        //   $values["rsi"] = null;
+        // }
 
-        if(isset($columns[$i])) {
-          $values["ao"] = $columns[$i];
+        if(isset($columns[$i+4])) {
+          $values["ao"] = $columns[$i+4];
         }
-        else {
-          $values["ao"] = null;
-        }
+        // else {
+        //   $values["ao"] = null;
+        // }
 
         $db->update("history", ["id"=>$history["id"]], $values);
       }
