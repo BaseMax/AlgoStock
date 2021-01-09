@@ -743,9 +743,11 @@ function main() {
         case "update":
           array_shift($argv);
           array_shift($argv);
+          array_shift($argv);
           arg_indicator_update($argv);
           break;
         case "clear":
+          array_shift($argv);
           array_shift($argv);
           array_shift($argv);
           arg_indicator_clear($argv);
