@@ -592,6 +592,10 @@ function arg_indicator_clear($args=[]) {
   $db->update("history", [], ["rsi"=>null, "ao"=>null]);
 }
 
+// function arg_indicator_updateLast($args=[]) {
+//   arg_indicator_update("last");
+// }
+
 function arg_indicator_update($args=[]) {
   global $db;
 
@@ -599,10 +603,16 @@ function arg_indicator_update($args=[]) {
   $symbols = get_symbol_list();
   $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
-    // $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC", "id,low,high,close");
     $clauses = ["symbolID"=>$symbol["id"]];
     $count = $db->count("history", $clauses);
     $pageAll = ceil($count / $paging);
+
+    if(isset($args[0]) and $args[0] === "last") {
+      $page = $pageAll;
+    } 
+    else {
+      $page = 1;
+    }
 
     // $histories = $db->selects("history", $clauses, "ORDER BY `epoch` DESC LIMIT 100", "id,low,high,open,close");
     // print_r($histories);
@@ -620,7 +630,7 @@ function arg_indicator_update($args=[]) {
     // exit();
 
     // $sql = "ORDER BY `epoch` ASC";
-    for($page = 1; $page <= $pageAll; $page++) {
+    for(; $page <= $pageAll; $page++) {
       $sql = "ORDER BY `epoch` ASC LIMIT ".$paging." OFFSET ". ($page - 1) * $paging;
       $histories = $db->selects("history", $clauses, $sql, "id,low,high,open,close");
       // print count($histories);
