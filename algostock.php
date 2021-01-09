@@ -652,7 +652,6 @@ function arg_indicator_update($args=[]) {
       // print "\n";
       // file_put_contents("temp.txt", print_r($columns, true)."\n-----\n", FILE_APPEND);
 
-
       $db->database->beginTransaction();
       foreach($histories as $i=>$history) {
         $values = [];
@@ -663,14 +662,15 @@ function arg_indicator_update($args=[]) {
         //   $values["rsi"] = null;
         // }
 
-        if(isset($columns[$i+4])) {
-          $values["ao"] = $columns[$i+4];
+        if(isset($columns[$i-4])) {
+          $values["ao"] = $columns[$i-4];
         }
         // else {
         //   $values["ao"] = null;
         // }
-
-        $db->update("history", ["id"=>$history["id"]], $values);
+        if($values !== []) {
+          $db->update("history", ["id"=>$history["id"]], $values);
+        }
       }
       $db->database->commit();
       unset($rsi);
