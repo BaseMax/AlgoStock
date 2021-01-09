@@ -407,16 +407,24 @@ function get_symbol_list() {
 }
 
 function arg_symbol_list($args=[]) {
-  $symbols = get_symbol_list();
-  print_symbols($symbols);
-}
-
-function arg_symbol_listall($args=[]) {
   global $db;
 
-  $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol`;");
+  if(isset($args[0]) and $args[0] === "all") {
+    $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol`;");
+  }
+  else {
+    $symbols = get_symbol_list();
+  }
+
   print_symbols($symbols);
 }
+
+// function arg_symbol_listall($args=[]) {
+//   global $db;
+
+//   $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol`;");
+//   print_symbols($symbols);
+// }
 
 function print_symbols($symbols) {
   print_r($symbols);
@@ -766,11 +774,11 @@ function main() {
           array_shift($argv);
           arg_symbol_list($argv);
           break;
-        case "listall":
-          array_shift($argv);
-          array_shift($argv);
-          arg_symbol_listall($argv);
-          break;
+        // case "listall":
+        //   array_shift($argv);
+        //   array_shift($argv);
+        //   arg_symbol_listall($argv);
+        //   break;
         case "clear":
           array_shift($argv);
           array_shift($argv);
