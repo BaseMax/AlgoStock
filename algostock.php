@@ -639,7 +639,11 @@ function arg_indicator_update($args=[]) {
 
     // $sql = "ORDER BY `epoch` ASC";
     for(; $page <= $pageAll; $page++) {
-      $sql = "ORDER BY `epoch` ASC LIMIT ".$paging." OFFSET ". ($page - 1) * $paging;
+      $offset = (($page - 1) * $paging)-15;
+      if($offset < 0) {
+        $offset = 0;
+      }
+      $sql = "ORDER BY `epoch` ASC LIMIT ".$paging." OFFSET ". $offset;
       $histories = $db->selects("history", $clauses, $sql, "id,low,high,open,close");
       // print count($histories);
       // print "\t";
