@@ -595,80 +595,91 @@ function arg_indicator_clear($args=[]) {
 function arg_indicator_update($args=[]) {
   global $db;
 
+  $paging = 20000;
   $symbols = get_symbol_list();
   $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
     // $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC", "id,low,high,close");
-    $histories = $db->selects("history", ["symbolID"=>$symbol["id"]], "ORDER BY `epoch` ASC LIMIT 5000", "id,low,high,close");
-    print count($histories);
+    $clauses = ["symbolID"=>$symbol["id"]];
+    $count = $db->count("history", $clauses);
+    $pageAll = ceil($count / $paging);
 
-    $prices = array_map(function($history) {
-        return $history["close"];
-    }, $histories);
-    print count($prices);
-    $rsi = trade_rsi($prices, 14);
-    unset($prices);
+    // $sql = "ORDER BY `epoch` ASC";
+    for($page = 1; $page <= $pageAll; $page++) {
+      $sql = "ORDER BY `epoch` ASC LIMIT 100000 OFFSET ". ($page - 1) * $paging;
+      $histories = $db->selects("history", $clauses, $sql, "id,low,high,close");
+      print count($histories);
 
-    $db->database->beginTransaction();
-    foreach($histories as $i=>$history) {
-      $values = [];
-      if(isset($rsi[$i])) {
-        $values["rsi"] = $rsi[$i];
+      $prices = array_map(function($history) {
+          return $history["close"];
+      }, $histories);
+      print count($prices);
+      $rsi = trade_rsi($prices, 14);
+      unset($prices);
+
+      $db->database->beginTransaction();
+      foreach($histories as $i=>$history) {
+        $values = [];
+        if(isset($rsi[$i])) {
+          $values["rsi"] = $rsi[$i];
+        }
+        else {
+          $values["rsi"] = null;
+        }
+        $db->update("history", ["id"=>$history["id"]], $values);
       }
-      else {
-        $values["rsi"] = null;
+      $db->database->commit();
+      unset($rsi);
+
+      $columns = [];
+      $columns["low"] = array_map(function($history) {
+          return $history["low"];
+      }, $histories);
+
+      $columns["high"] = array_map(function($history) {
+          return $history["high"];
+      }, $histories);
+
+      $columns = trade_ao($columns, true);
+      // print_r($columns);
+
+      $db->database->beginTransaction();
+      foreach($histories as $i=>$history) {
+        $values = [];
+        if(isset($columns[$i])) {
+          $values["ao"] = $columns[$i];
+        }
+        else {
+          $values["ao"] = null;
+        }
+        $db->update("history", ["id"=>$history["id"]], $values);
       }
-      $db->update("history", ["id"=>$history["id"]], $values);
+      $db->database->commit();
+      unset($histories);
+
+      // foreach($histories as $i=>$history) {
+      //   $values = [];
+
+      //   if(isset($rsi[$i])) {
+      //     $values["rsi"] = $rsi[$i];
+      //   }
+      //   else {
+      //     $values["rsi"] = null;
+      //   }
+
+      //   if(isset($ao[$i])) {
+      //     $values["ao"] = $ao[$i];
+      //   }
+      //   else {
+      //     $values["ao"] = null;
+      //   }
+
+      //   $db->update("history", ["id"=>$history["id"]], $values);
+      // }
+      // $db->database->commit();
+
+
     }
-    $db->database->commit();
-    unset($rsi);
-
-
-    $columns = [];
-    $columns["low"] = array_map(function($history) {
-        return $history["low"];
-    }, $histories);
-
-    $columns["high"] = array_map(function($history) {
-        return $history["high"];
-    }, $histories);
-
-    $columns = trade_ao($columns, true);
-    // print_r($ao);
-
-    $db->database->beginTransaction();
-    foreach($histories as $i=>$history) {
-      $values = [];
-      if(isset($columns[$i])) {
-        $values["ao"] = $columns[$i];
-      }
-      else {
-        $values["ao"] = null;
-      }
-      $db->update("history", ["id"=>$history["id"]], $values);
-    }
-    $db->database->commit();
-
-    // foreach($histories as $i=>$history) {
-    //   $values = [];
-
-    //   if(isset($rsi[$i])) {
-    //     $values["rsi"] = $rsi[$i];
-    //   }
-    //   else {
-    //     $values["rsi"] = null;
-    //   }
-
-    //   if(isset($ao[$i])) {
-    //     $values["ao"] = $ao[$i];
-    //   }
-    //   else {
-    //     $values["ao"] = null;
-    //   }
-
-    //   $db->update("history", ["id"=>$history["id"]], $values);
-    // }
-    // $db->database->commit();
   }
 }
 
