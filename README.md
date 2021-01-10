@@ -1,6 +1,6 @@
 # AlgoStock
 
-**Total Benefit of this symbol: -365.97%**
+**Total Benefit of one symbol at 3 years: -365.97%**
 
 ## Using
 
