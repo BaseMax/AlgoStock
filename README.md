@@ -1,5 +1,7 @@
 # AlgoStock
 
+**Total Benefit of this symbol: -365.97%**
+
 ## Using
 
 ```
@@ -31,6 +33,10 @@ Help:
       algostock indicator update last: Update indicator of last history rows
 
 ```
+
+## Updates
+
+**2021-01-11:** After 10 days full-time working at develop this algorithm, I lose more than 365% of money!
 
 ---------
 
