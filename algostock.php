@@ -2,7 +2,7 @@
 /*
  * @Name: Algo Stock
  * @Author: Max Base
- * @Date: 2021-01-05
+ * @Date: 2021-01-04, 2021-01-05, 2021-01-06, 2021-01-07, 2021-01-08, 2021-01-09, 2021-01-10
  * @Repository: https://github.com/BaseMax/AlgoStock
  */
 
@@ -402,7 +402,8 @@ function arg_symbol_update($args=[]) {
 function get_symbol_list() {
   global $db;
 
-  $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol` WHERE `rahavardID` IS NOT NULL AND `tsetmcID` IS NOT NULL AND `tsetmcINS` IS NOT NULL;");
+  // $symbols = $db->selectsRaw("SELECT * FROM $db->db.`symbol` WHERE `rahavardID` IS NOT NULL AND `tsetmcID` IS NOT NULL AND `tsetmcINS` IS NOT NULL;");
+  $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   return $symbols;
 }
 
@@ -439,6 +440,302 @@ function arg_symbol_clear($args=[]) {
 
   $db->delete("symbol", []);
   print "Dlete all symbols.\r\n";
+}
+
+function startsWith($string, $startString) { 
+  $len = strlen($startString); 
+  return (substr($string, 0, $len) === $startString); 
+} 
+  
+function endsWith($string, $endString) { 
+  $len = strlen($endString); 
+  if($len == 0) { 
+    return true; 
+  } 
+  return(substr($string, -$len) === $endString); 
+} 
+
+function find_history_at_end_of_day($histories, $s) {
+  $find = [];
+  $length = count($histories);
+  $i=0;
+  foreach($histories as $history) {
+    if(!startsWith($history["time"],"12:")) {
+      continue;
+    }
+
+    $time_min = $history["time"];
+    $time_min = substr($time_min, -5, 2);
+    // print $time_min."\n";
+    $time_min = (int)$time_min;
+
+    if($time_min >= $s) {
+      $find = $history;
+      break;
+    }
+    $i++;
+  }
+
+  if($find === []) {
+    $i = $length-1;
+    $find = $histories[$length-1];
+  }
+
+  return [$i, $find];
+}
+
+function arg_analyze_list($args=[]) {
+  global $db;
+
+  $analyze_per_day = false;
+  $symbols = get_symbol_list();
+  $benfitTotal = 0;
+  foreach($symbols as $symbol) {
+    // $histories = $db->selects("history", [], "", "date, time, rsi, ao");
+    $days = $db->selectsRaw("SELECT date FROM $db->db.`history` WHERE `rsi` IS NOT NULL AND `ao` IS NOT NULL GROUP BY `date` ORDER BY `epoch` ASC;");
+    $benfitAll = 0;
+    foreach($days as $day) {
+      $benfitDay = 0;
+      $day = $day["date"];
+      if($analyze_per_day) {
+        $todayHistories = $db->selectsRaw("SELECT time, volume, rsi, ao, close FROM $db->db.`history` WHERE `date` = '$day' AND `rsi` IS NOT NULL AND `ao` IS NOT NULL ORDER BY `epoch` ASC;");
+      }
+      else {
+        $todayHistories = $db->selectsRaw("SELECT time, volume, rsi, ao, close FROM $db->db.`history` WHERE `rsi` IS NOT NULL AND `ao` IS NOT NULL ORDER BY `epoch` ASC;");
+      }
+      if($todayHistories === [] || $todayHistories === null) {
+        continue;
+      }
+
+      // print_r($day);
+      // print_r($histories);
+
+      $trades = [];
+      $x = 0;
+      $length = count($todayHistories);
+      for($i=0;$i<$length;$i++) {
+        if($i <= 16) {
+          continue;
+        }
+        $aoDiff = $todayHistories[$i]["ao"] - $todayHistories[$i-1]["ao"];
+        $todayHistories[$i]["trade_buy"] = ($aoDiff > 0 && $todayHistories[$i]["rsi"]<40) ? true : false;
+        $todayHistories[$i]["trade_sale"] = ($aoDiff < 0 && $todayHistories[$i]["rsi"]>60) ? true : false;
+        if($todayHistories[$i]["trade_buy"] === true) {
+          $type = "buy";
+        }
+        else if($todayHistories[$i]["trade_sale"] === true) {
+          $type = "sale";
+        }
+
+        if(isset($type)) {
+          if(($trades === [] and $type === "buy") || ($trades !== [] and (
+              ($trades[$x-1]["type"] === "sale" and $type !== "sale")
+              ||
+              ($trades[$x-1]["type"] === "buy" and $type !== "buy")
+            )
+          )) {
+            $trades[$x++]=[
+              "id"=>$i,
+              // "date"=>$todayHistories[$i]["date"],
+              "date"=>$day,
+              "time"=>$todayHistories[$i]["time"],
+              "type"=>$type,
+              "close"=>$todayHistories[$i]["close"],
+              "volume"=>$todayHistories[$i]["volume"],
+              "rsi"=>$todayHistories[$i]["rsi"],
+              "ao"=>$todayHistories[$i]["ao"],
+            ];
+          }
+        }
+        unset($type);
+      }
+
+      if($trades === [] || $trades === null) {
+        continue;
+      }
+
+      // Auto sale at last time of day
+      /*
+      if($trades[$x-1]["type"] === "buy") {
+        $findHistory = find_history_at_end_of_day($todayHistories, 15); // 15 is mins at 12th hours of day/morning
+
+        // TODO: check $findHistory[1] is [] or null!
+        $i = $findHistory[0];
+        $findHistory = $findHistory[1];
+
+        $trades[] = [
+          "id"=>$i,
+          "date"=>$day,
+          "time"=>$findHistory["time"],
+          "type"=>"sale",
+          "close"=>$findHistory["close"],
+          "volume"=>$findHistory["volume"],
+          "rsi"=>$findHistory["rsi"],
+          "ao"=>$findHistory["ao"],
+          "auto"=>true,
+        ];
+      }
+      */
+
+      // print_r($trades);
+      // exit();
+
+      $length = count($trades);
+      for($i=0;$i<$length;$i++) {
+        if($trades[$i]["type"] === "sale") {
+          $priceDiff = $trades[$i]["close"] - $trades[$i-1]["close"];
+          $percent = $priceDiff * 100 / $trades[$i-1]["close"];
+          // print $priceDiff."\t".n2n($percent)."%\n";
+          print $trades[$i-1]["date"]." ".$trades[$i-1]["time"] . "\t";
+          print $trades[$i-1]["close"]."\t";
+          print $trades[$i-1]["rsi"]."\t";
+          print $trades[$i-1]["ao"]."\t";
+          print "<->\t";
+          print $trades[$i]["date"]." ".$trades[$i]["time"] . "\t";
+          print $trades[$i]["close"]."\t";
+          print $trades[$i]["rsi"]."\t";
+          print $trades[$i]["ao"]."\t";
+          print "=\t";
+          print n2n($percent)."%";
+          print "\t";
+          $benfit = n2n($percent) - 1.2;
+          print $benfit."%";
+          $benfitDay += $benfit;
+          if(isset($trades[$i]["auto"])) {
+            print "\t*";
+          }
+          print "\n";
+        }
+      }
+
+      $benfitAll += $benfitDay;
+
+      if($analyze_per_day) {
+        print "All Benfit of this symbol: " . $benfitAll."\n";
+        print "-------------------------------------------------------\n";
+      }
+      else {
+        break;
+      }
+      // exit();
+    }
+    // print_r($days);
+    // exit();
+
+    // print count($histories)."\n";
+    // $histories = array_slice($histories, 14);
+    // print count($histories)."\n";
+    // print_r($histories);
+
+    // if($histories === [] || $histories === null) {
+    //   continue;
+    // }
+
+    // $currentDate = $histories[0]["date"];
+    // $todayHistories = [];
+    // $todayHistories[] = $histories[0];
+
+    // $length = count($histories);
+    // $lengthHistories = $length;
+
+    // $firstDate = $currentDate;
+    // $lastDate = $histories[$length-1]["date"];
+    // $lastIndex = 1;
+
+    // while($lastIndex < $lengthHistories) {
+    //   for($i=$lastIndex;$i<$length;$i++) {
+    //     if($histories[$i]["date"] === $currentDate) {
+    //       $todayHistories[] = $histories[$i];
+    //     }
+    //     else {
+    //       // $lastIndex = $i;
+    //       break;
+    //       // $currentDate = $histories[$i]["date"];
+    //       // $i--;
+    //     }
+    //   }
+    //   $lastIndex = $i;
+
+      // print_r($todayHistories);
+
+      // $trades = [];
+      // $x = 0;
+
+      // // $length = count($histories);
+      // $length = count($todayHistories);
+      // // foreach($todayHistories as $i=>$history) {
+      // for($i=0;$i<$length;$i++) {
+      //   if($i <= 16) {
+      //     continue;
+      //   }
+      //   // print ".";
+      //   $aoDiff = $todayHistories[$i]["ao"] - $todayHistories[$i-1]["ao"];
+      //   $todayHistories[$i]["trade_buy"] = ($aoDiff > 0 && $todayHistories[$i]["rsi"]<40) ? true : false;
+      //   $todayHistories[$i]["trade_sale"] = ($aoDiff < 0 && $todayHistories[$i]["rsi"]>60) ? true : false;
+      //   // print $todayHistories[$i]["trade_buy"]."\t";
+      //   // print $todayHistories[$i]["trade_sale"]."\n";
+      //   if($todayHistories[$i]["trade_buy"] === true) {
+      //     $type = "buy";
+      //   }
+      //   else if($todayHistories[$i]["trade_sale"] === true) {
+      //     $type = "sale";
+      //   }
+      //   // print_r($todayHistories[$i]);
+
+      //   if(isset($type)) {
+      //     if(($trades === [] and $type === "buy") || ($trades !== [] and (
+      //         ($trades[$x-1]["type"] === "sale" and $type !== "sale")
+      //         ||
+      //         ($trades[$x-1]["type"] === "buy" and $type !== "buy")
+      //       )
+      //     )) {
+      //       $trades[$x++]=[
+      //         "id"=>$i,
+      //         "date"=>$todayHistories[$i]["date"],
+      //         "time"=>$todayHistories[$i]["time"],
+      //         "type"=>$type,
+      //         "close"=>$todayHistories[$i]["close"],
+      //         "volume"=>$todayHistories[$i]["volume"],
+      //         "rsi"=>$todayHistories[$i]["rsi"],
+      //         "ao"=>$todayHistories[$i]["ao"],
+      //       ];
+      //     }
+      //   }
+      //   unset($type);
+      // }
+
+      // if($trades === [] || $trades === null) {
+      //   continue;
+      // }
+      // print_r($trades);
+      // exit();
+
+      // $length = count($trades);
+      // // foreach($trades as $i=>$trade) {
+      // for($i=0;$i<$length;$i++) {
+      //   if($trades[$i]["type"] === "sale") {
+      //     $priceDiff = $trades[$i]["close"] - $trades[$i-1]["close"];
+      //     $percent = $priceDiff * 100 / $trades[$i-1]["close"];
+      //     // print $priceDiff."\t".n2n($percent)."%\n";
+      //     print $trades[$i-1]["date"]." ".$trades[$i-1]["time"] . "\t";
+      //     print $trades[$i-1]["close"]."\t";
+      //     print $trades[$i-1]["rsi"]."\t";
+      //     print $trades[$i-1]["ao"]."\t";
+      //     print "<->\t";
+      //     print $trades[$i]["date"]." ".$trades[$i]["time"] . "\t";
+      //     print $trades[$i]["close"]."\t";
+      //     print $trades[$i]["rsi"]."\t";
+      //     print $trades[$i]["ao"]."\t";
+      //     print "=\t";
+      //     print n2n($percent)."%\n";
+      //   }
+      // }
+      // print_r($trades);
+    // }
+    print "Total Benfit of this symbol: " . $benfitAll."\n";
+    $benfitTotal += $benfitAll;
+  }
+  print "Total Benfit of all symbol: " . $benfitTotal."\n";
 }
 
 function arg_history_list($args=[]) {
@@ -492,9 +789,13 @@ function arg_history_update($args=[]) {
   global $db;
   global $debug;
 
+  if(isset($args[0]) and $args[0] === "last") {
+    // $args[0] = getEpochDate(time());
+    $args[0] = strtotime( date("Y/m/d"). " " . TIME_START );
+  }
+
   $length = count($args);
   $symbols = get_symbol_list();
-  $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
     if($debug) {
       logs($symbol);
@@ -506,9 +807,9 @@ function arg_history_update($args=[]) {
     else {
         $startTime = get_last_time_of_symbol($symbol["id"]);
     }
-    $startTime = 1483894017;// 947350017;
-    $startTime = 1605835337-1;
-    $endTime = 1605835337;
+    // $startTime = 1483894017;// 947350017;
+    // $startTime = 1605835337-1;
+    // $endTime = 1605835337;
     $endTime = strtotime( date("Y/m/d"). " " . TIME_END );
 
     // https://rahavard365.com/api/chart/bars?ticker=exchange.asset%3A772%3Areal_close&resolution=1&startDateTime=1&endDateTime=1605835337&firstDataRequest=false
@@ -525,9 +826,9 @@ function getEpochTime($epoch) {
   return date("H:i:s", substr($epoch, 0, 10));
 }
 
-function arg_history_updatetoday($args=[]) {
-  arg_history_update(getEpochDate(time()));
-}
+// function arg_history_updatetoday($args=[]) {
+//   arg_history_update(getEpochDate(time()));
+// }
 
 /**
  Moving Average Convergence/Divergence
@@ -609,7 +910,6 @@ function arg_indicator_update($args=[]) {
 
   $paging = 10000;
   $symbols = get_symbol_list();
-  $symbols = [ $db->select("symbol", ["name"=>"شبندر"]) ];
   foreach($symbols as $symbol) {
     $clauses = ["symbolID"=>$symbol["id"]];
     $count = $db->count("history", $clauses);
@@ -643,7 +943,7 @@ function arg_indicator_update($args=[]) {
       if($offset < 0) {
         $offset = 0;
       }
-      $sql = "ORDER BY `epoch` ASC LIMIT ".$paging." OFFSET ". $offset;
+      $sql = "ORDER BY `epoch` ASC LIMIT ".($paging+15)." OFFSET ". $offset;
       $histories = $db->selects("history", $clauses, $sql, "id,low,high,open,close");
       // print count($histories);
       // print "\t";
@@ -718,6 +1018,20 @@ function main() {
   }
   else if($length > 1) {
     switch($argv[1]) {
+    case "analyze":
+      if(!isset($argv[2])) {
+        $argv[2]=null;
+      }
+      switch(strtolower($argv[2])) {
+        case "list":
+          array_shift($argv);
+          array_shift($argv);
+          arg_analyze_list($argv);
+          break;
+        default:
+          arg_help($argv, true);
+      }
+      break;
     case "history":
       if(!isset($argv[2])) {
         $argv[2]=null;
@@ -738,11 +1052,11 @@ function main() {
           array_shift($argv);
           arg_history_update($argv);
           break;
-        case "updatetoday":
-          array_shift($argv);
-          array_shift($argv);
-          arg_history_updatetoday($argv);
-          break;
+        // case "updatetoday":
+        //   array_shift($argv);
+        //   array_shift($argv);
+        //   arg_history_updatetoday($argv);
+        //   break;
         default:
           arg_help($argv, true);
       }
