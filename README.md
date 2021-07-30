@@ -1,5 +1,7 @@
 # AlgoStock
 
+AlgoStock is a PHP-based CLI script to get prices and information from the Iran Stock Exchange and store these in the database, after that we calculate some indicators and will order buy and sell every time it thinks is a good time.
+
 **Total Benefit of one symbol at 3 years: -365.97%**
 
 ## Using
